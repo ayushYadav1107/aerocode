@@ -33,10 +33,8 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="flex flex-col min-h-screen">
-              <Toaster />
-              <div className="flex-1">{children}</div>
-            </div>
+            <Toaster />
+            {children}
           </ThemeProvider>
         </body>
       </html>
