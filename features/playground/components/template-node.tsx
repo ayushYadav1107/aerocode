@@ -139,19 +139,20 @@ const TemplateNode = ({
     };
     const confirmDelete = () => {
       onDeleteFile?.(file, path);
-      setIsDeleteDialogOpen(true);
+      setIsDeleteDialogOpen(false);
     };
     const handleRenameSubmit = (newFileName: string, newExtension: string) => {
       onRenameFile?.(file, newFileName, newExtension, path);
-      setIsRenameDialogOpen(true);
+      setIsRenameDialogOpen(false);
     };
     return (
       <SidebarMenuItem>
         <div className="flex items-center group">
-          <SidebarMenuButton className="flex-1">
+          <SidebarMenuButton isActive={isSelected} onClick={() => onFileSelect?.(file)} className="flex-1">
             <File className="h-4 w-4 mr-2 shrink-0" />
             <span>{fileName}</span>
           </SidebarMenuButton>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -220,7 +221,7 @@ const TemplateNode = ({
         const newFolder: TemplateFolder = {
           folderName,
           items: [],
-        }
+        } 
         onAddFolder(newFolder, currentPath)
       }
       setIsNewFolderDialogOpen(false)
