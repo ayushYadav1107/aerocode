@@ -1,8 +1,7 @@
-import { readTemplateStructureFromJson, saveTemplateStructureToJson } from "@/features/playground/libs/path-to-json";
+import { scanTemplateDirectory } from "@/features/playground/libs/path-to-json";
 import {db} from "@/lib/db";
 import { templatePaths } from "@/lib/template";
 import path from "path";
-import fs from "fs/promises";
 import { NextRequest } from "next/server";
 
 
@@ -18,7 +17,7 @@ function validateJsonStructure(data: unknown): boolean {
 }
 
 export async function GET(
-    request:NextRequest, 
+    request:NextRequest,
     {params}:{params:Promise<{id:string}>}
 ){
     const { id } = await params;
@@ -46,23 +45,15 @@ export async function GET(
 
     try {
     const inputPath = path.join(process.cwd(), templatePath);
-    const outputFile = path.join(process.cwd(), `output/${templateKey}.json`);
 
-    console.log("Input Path:", inputPath);
-    console.log("Output Path:", outputFile);
+    // Scan in memory. Never write to disk inside the project directory: the dev
+    // server watches it, and a write mid-request tears down the render worker.
+    const result = await scanTemplateDirectory(inputPath);
 
-    // Save and read the template structure
-    await saveTemplateStructureToJson(inputPath, outputFile);
-    const result = await readTemplateStructureFromJson(outputFile);
-
-    // Validate the JSON structure before saving
+    // Validate the JSON structure before returning
     if (!validateJsonStructure(result.items)) {
       return Response.json({ error: "Invalid JSON structure" }, { status: 500 });
     }
-
-
-
-    await fs.unlink(outputFile);
 
     return Response.json({ success: true, templateJson: result }, { status: 200 });
   } catch (error) {
