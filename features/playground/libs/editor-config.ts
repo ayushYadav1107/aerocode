@@ -222,15 +222,31 @@ export const configureMonaco = (monaco: Monaco) => {
   // Set the theme
   monaco.editor.setTheme("modern-dark");
   
+  // Dependencies live in the WebContainer, not in the Monaco worker, so anything that
+  // depends on resolving "react", "./style.css", etc. can never succeed here. Silence
+  // just those diagnostics instead of turning off semantic validation altogether.
+  const diagnosticCodesToIgnore = [
+    2307, // Cannot find module '...' or its corresponding type declarations
+    2792, // Cannot find module - did you mean to set moduleResolution to 'node'?
+    7016, // Could not find a declaration file for module '...'
+    7026, // JSX element implicitly has type 'any' (no JSX.IntrinsicElements)
+    2686, // '<name>' refers to a UMD global
+    2875, // This JSX tag requires the module path 'react/jsx-runtime' to exist
+    2874, // This JSX tag requires '<name>' to be in scope
+    2786, // '<name>' cannot be used as a JSX component
+  ];
+
   // Configure additional editor settings
   monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
+    diagnosticCodesToIgnore,
   });
-  
+
   monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
+    diagnosticCodesToIgnore,
   });
 
   // Set compiler options for better IntelliSense
@@ -238,12 +254,14 @@ export const configureMonaco = (monaco: Monaco) => {
     target: monaco.languages.typescript.ScriptTarget.Latest,
     allowNonTsExtensions: true,
     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.languages.typescript.ModuleKind.CommonJS,
+    module: monaco.languages.typescript.ModuleKind.ESNext,
     noEmit: true,
     esModuleInterop: true,
-    jsx: monaco.languages.typescript.JsxEmit.React,
+    // Automatic runtime: JSX no longer requires React to be in scope
+    jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
     reactNamespace: "React",
     allowJs: true,
+    noImplicitAny: false,
     typeRoots: ["node_modules/@types"],
   });
 
@@ -251,13 +269,15 @@ export const configureMonaco = (monaco: Monaco) => {
     target: monaco.languages.typescript.ScriptTarget.Latest,
     allowNonTsExtensions: true,
     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.languages.typescript.ModuleKind.CommonJS,
+    module: monaco.languages.typescript.ModuleKind.ESNext,
     noEmit: true,
     esModuleInterop: true,
     allowSyntheticDefaultImports: true,
-    jsx: monaco.languages.typescript.JsxEmit.React,
+    // Automatic runtime: JSX no longer requires React to be in scope
+    jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
     reactNamespace: "React",
     allowJs: true,
+    noImplicitAny: false,
     typeRoots: ["node_modules/@types"],
   });
 };
