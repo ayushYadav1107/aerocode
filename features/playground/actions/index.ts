@@ -59,6 +59,11 @@ export const createPlayground = async (data: {
             }
         })
 
+        // The dashboard is a server component that reads this list. Without this the
+        // cached payload is reused when navigating back and the new playground is
+        // missing until a full page reload.
+        revalidatePath("/dashboard");
+
         return playground;
     } catch (error) {
         console.log(error)

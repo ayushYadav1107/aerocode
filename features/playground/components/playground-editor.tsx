@@ -1,7 +1,9 @@
 "use client"
-import React, {useEffect, useCallback, useRef} from 'react'
+import React, {useMemo, useRef} from 'react'
 import Editor, {type Monaco} from '@monaco-editor/react'
-import { TemplateFile } from '../libs/path-to-json'
+import { TemplateFile } from '../types'
+import { findFilePath } from '../libs'
+import { useFileExplorer } from '../hooks/useFileExplorer'
 import {configureMonaco, defaultEditorOptions, getEditorLanguage} from '@/features/playground/libs/editor-config';
 
 interface PlaygroundEditorProps {
@@ -16,37 +18,38 @@ const PlaygroundEditor = ({
 }: PlaygroundEditorProps) => {
     const editorRef = useRef<any>(null);
     const monacoRef = useRef<Monaco | null>(null);
-
+    const templateData = useFileExplorer((state) => state.templateData);
 
     const handleEditorDidMount = (editor:any, monaco:Monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
 
         configureMonaco(monaco);
-        updateEditorLanguage()
     }
 
-    const updateEditorLanguage = ()=>{
-        if(!activeFile ||!monacoRef.current || !editorRef.current) return
-        const model = editorRef.current.getModel();
-        if(!model) return
+    // Monaco's TypeScript worker infers TS/TSX vs JS/JSX from the model's URI, not from
+    // the editor language. Without a path every model is "inmemory://model/N", which has
+    // no extension and falls back to JavaScript - so .tsx files report "Type annotations
+    // can only be used in TypeScript files". Giving each file a real path fixes that.
+    const modelPath = useMemo(() => {
+        if (!activeFile) return undefined
 
-        const language = getEditorLanguage(activeFile.fileExtension || "")
-        try {
-            monacoRef.current.editor.setModelLanguage(model, language)
-        } catch(error) {
-            console.warn("Failed to set editor language:", error)
-        }
-    }
+        const extensionSuffix = activeFile.fileExtension ? `.${activeFile.fileExtension}` : ""
+        const filePath =
+            (templateData && findFilePath(activeFile, templateData)) ||
+            `${activeFile.filename}${extensionSuffix}`
 
-    useEffect(() => {
-        updateEditorLanguage()
-    }, [activeFile])
+        return `file:///${filePath.replace(/^\/+/, "")}`
+    }, [activeFile, templateData])
+
+  // w-full + overflow-hidden keeps Monaco's own measurements from widening the
+  // panel it lives in, which pushed the layout sideways.
   return (
-    <div className='h-full relative'>
+    <div className='h-full w-full relative overflow-hidden'>
         {/* ai thinking */ }
         <Editor
         height={"100%"}
+        path={modelPath}
         value={content}
         onChange={(value) => onContentChange(value || "")}
         onMount={handleEditorDidMount}

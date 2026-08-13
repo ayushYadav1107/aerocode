@@ -80,6 +80,7 @@ export async function scanTemplateDirectory(
             '.git',
             '.vscode',
             '.idea',
+            '.bolt',
             'dist',
             'build',
             'coverage'
