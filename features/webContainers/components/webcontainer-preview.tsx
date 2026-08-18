@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { transformToWebContainerFormat } from "../hooks/transformer";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import TerminalComponent, { type TerminalRef } from "./terminal";
+import TerminalPanel, { type TerminalPanelRef } from "./terminal-panel";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -26,38 +26,23 @@ interface WebContainerPreviewProps {
 
 const TOTAL_STEPS = 4;
 
-/**
- * Setup progress lives outside React so that a remount of this component (React
- * StrictMode in dev, toggling the preview, switching tabs) reuses the container
- * that is already installing/running instead of restarting from step 0.
- */
 type SetupRecord = {
-  /** Which playground the container currently holds. Null before the first setup. */
   playgroundId: string | null;
   step: number;
   stepStartedAt: number;
   url: string | null;
   error: string | null;
   promise: Promise<void> | null;
-  /** The running dev server, kept so it can be stopped when switching playgrounds. */
   devProcess: WebContainerProcess | null;
-  /**
-   * Terminal sink. Lives on the record rather than in component state because
-   * runSetup outlives any single mount of this component.
-   */
   write: ((text: string) => void) | null;
   listenersAttached: boolean;
   listeners: Set<() => void>;
 };
 
-/** Writes to the terminal if one is currently mounted. */
 function emit(record: SetupRecord, text: string) {
   record.write?.(text);
 }
 
-// Kept on globalThis, not in module scope: HMR re-evaluates this module while the
-// container keeps running, and a fresh map would re-run npm install and spawn a
-// second dev server on every edit.
 const RECORDS_KEY = "__aerocode_webcontainer_setup__";
 
 const records: WeakMap<WebContainer, SetupRecord> = ((
@@ -92,10 +77,6 @@ function update(record: SetupRecord, patch: Partial<SetupRecord>) {
   record.listeners.forEach((notify) => notify());
 }
 
-
-/**
- * Turns WebContainer's internal errors into something a user can act on.
- */
 function explainError(message: string): string {
   if (/service worker/i.test(message)) {
     return (
@@ -119,7 +100,6 @@ async function resolveDevScript(instance: WebContainer): Promise<string> {
     throw new Error("No package.json found at the root of this template.");
   }
 
-  // Templates differ: vite uses `dev`, CRA-style ones use `start`.
   const script = ["dev", "start", "serve", "preview"].find(
     (name) => pkg.scripts?.[name],
   );
@@ -133,11 +113,6 @@ async function resolveDevScript(instance: WebContainer): Promise<string> {
   return script;
 }
 
-/**
- * Stops the dev server started for the previous playground. Without this its port
- * stays bound, so the next playground's server either fails to start or lands on a
- * different port while the preview still points at the old one.
- */
 async function stopDevServer(record: SetupRecord) {
   const running = record.devProcess;
   if (!running) return;
@@ -145,26 +120,34 @@ async function stopDevServer(record: SetupRecord) {
   record.devProcess = null;
   running.kill();
 
-  // Don't block setup indefinitely if the process ignores the signal.
   await Promise.race([
     running.exit,
     new Promise((resolve) => setTimeout(resolve, 3000)),
   ]);
 }
 
-/**
- * Empties the working directory. Mounting alone only overwrites the paths present
- * in the new template, so files unique to the previous one would survive and get
- * served or compiled alongside it.
- */
+async function removeEntry(
+  instance: WebContainer,
+  path: string,
+  attempt = 0,
+): Promise<void> {
+  try {
+    await instance.fs.rm(path, { recursive: true, force: true });
+  } catch (error) {
+    if (attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return removeEntry(instance, path, attempt + 1);
+    }
+    console.warn(`Could not remove ${path}:`, error);
+  }
+}
+
 async function clearWorkdir(instance: WebContainer) {
   const entries = await instance.fs.readdir("/");
 
-  await Promise.all(
-    entries.map((entry) =>
-      instance.fs.rm(`/${entry}`, { recursive: true, force: true }),
-    ),
-  );
+  for (const entry of entries) {
+    await removeEntry(instance, `/${entry}`);
+  }
 }
 
 async function runSetup(
@@ -172,9 +155,6 @@ async function runSetup(
   templateData: TemplateFolder,
   record: SetupRecord,
 ) {
-  // Bound to the container, not to the component: the preview can be hidden or
-  // remounted while the server is still coming up, and the event must not be
-  // missed.
   if (!record.listenersAttached) {
     record.listenersAttached = true;
 
@@ -191,13 +171,10 @@ async function runSetup(
   }
 
   try {
-    // step 1 - transform data
     update(record, { error: null, step: 1 });
     emit(record, "\r\n🔄 Transforming template data...\r\n");
     const files = transformToWebContainerFormat(templateData);
 
-    // step 2 - hand the container over to this playground: stop whatever the
-    // previous one left running, clear its files, then mount these.
     update(record, { step: 2 });
     emit(record, "📁 Mounting files...\r\n");
     await stopDevServer(record);
@@ -205,11 +182,6 @@ async function runSetup(
     await instance.mount(files);
     emit(record, "✅ Files mounted\r\n");
 
-    // step 3 - install dependencies.
-    //
-    // The flags matter on large templates: the audit and funding steps each make
-    // their own registry round trip after the tree is built, and inside a browser
-    // VM that is where a big install tends to sit doing nothing visible.
     update(record, { step: 3 });
     emit(record, "📦 Installing dependencies...\r\n");
     const installProcess = await instance.spawn("npm", [
@@ -217,8 +189,6 @@ async function runSetup(
       "--no-audit",
       "--no-fund",
     ]);
-    // This stream must be consumed even with no terminal mounted, or the process
-    // stalls on backpressure.
     installProcess.output.pipeTo(
       new WritableStream({
         write: (data) => emit(record, data),
@@ -233,7 +203,6 @@ async function runSetup(
     }
     emit(record, "\r\n✅ Dependencies installed\r\n");
 
-    // step 4 - start the dev server (the server-ready listener is already attached)
     update(record, { step: 4 });
     const script = await resolveDevScript(instance);
     emit(record, `🚀 Starting dev server (npm run ${script})...\r\n`);
@@ -246,7 +215,6 @@ async function runSetup(
     );
 
     startProcess.exit.then((code) => {
-      // A process we deliberately stopped on a playground switch is not a failure.
       if (record.devProcess !== startProcess) return;
 
       if (!record.url) {
@@ -271,8 +239,6 @@ const WebContainerPreview = ({
   isLoading,
   forceResetup = false,
 }: WebContainerPreviewProps) => {
-  // A snapshot of the shared record, copied into React state so every update
-  // produces a fresh object and actually re-renders the step list.
   const [view, setView] = useState<{
     step: number;
     stepStartedAt: number;
@@ -285,16 +251,10 @@ const WebContainerPreview = ({
     error: null,
   });
 
-  // A clock sampled once a second. Kept as state so the elapsed time below stays a
-  // pure calculation - reading Date.now() during render is impure and rejected by
-  // the compiler.
   const [now, setNow] = useState(0);
 
-  const terminalRef = useRef<TerminalRef>(null);
+  const terminalRef = useRef<TerminalPanelRef>(null);
 
-  // Declared before the setup effect so the sink is connected by the time setup
-  // starts writing. Child refs are assigned before parent effects run, so the
-  // terminal is already mounted here.
   useEffect(() => {
     if (!instance) return;
     const current = getRecord(instance);
@@ -319,7 +279,6 @@ const WebContainerPreview = ({
       });
 
     current.listeners.add(sync);
-    // Catch up on progress that happened before this mount.
     sync();
 
     return () => {
@@ -344,9 +303,6 @@ const WebContainerPreview = ({
     if (!instance || !templateData || !playgroundId) return;
     const current = getRecord(instance);
 
-    // There is only one container for the whole page, so the record has to be keyed
-    // by playground as well. Without this check, opening a second playground finds
-    // a finished setup and keeps showing the first one's dev server.
     const isDifferentPlayground = current.playgroundId !== playgroundId;
 
     if (!forceResetup && !isDifferentPlayground && current.promise) return;
@@ -361,8 +317,6 @@ const WebContainerPreview = ({
 
     const promise = runSetup(instance, templateData, current);
     update(current, { promise });
-    // templateData is intentionally not re-triggering setup: edits are pushed
-    // into the running container through writeFileSync instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, playgroundId, forceResetup]);
 
@@ -418,9 +372,6 @@ const WebContainerPreview = ({
     );
   };
 
-  // The terminal stays mounted across every state below. Rendering it inside the
-  // branches instead would tear it down the moment the server became ready, taking
-  // the whole install log with it.
   const upperPane = (() => {
     if (error || setupError) {
       return (
@@ -497,19 +448,16 @@ const WebContainerPreview = ({
 
       <ResizableHandle withHandle />
 
-      {/* The terminal stays mounted in every state above it. Rendering it inside
-          the branches would tear it down when the server becomes ready, taking the
-          install log with it. */}
       <ResizablePanel
         defaultSize={35}
         minSize={10}
         className="min-h-0 overflow-hidden p-2"
       >
-        <TerminalComponent
+        <TerminalPanel
           ref={terminalRef}
           webContainerInstance={instance}
           theme="dark"
-          className="h-full"
+          className="h-full rounded-lg border bg-background overflow-hidden"
         />
       </ResizablePanel>
     </ResizablePanelGroup>

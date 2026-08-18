@@ -57,7 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NewFileDialog, NewFolderDialog, RenameFileDialog, RenameFolderDialog } from "./template-file-tree";
+import { DeleteDialog, NewFileDialog, NewFolderDialog, RenameFileDialog, RenameFolderDialog } from "./template-file-tree";
 
 interface TemplateFile {
   filename: string;
@@ -176,8 +176,27 @@ const TemplateNode = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+         <RenameFileDialog
+          isOpen={isRenameDialogOpen}
+          onClose={() => setIsRenameDialogOpen(false)}
+          onRename={handleRenameSubmit}
+          currentFilename={file.filename}
+          currentExtension={file.fileExtension}
+        />
+
+        <DeleteDialog
+          isOpen={isDeleteDialogOpen}
+          setIsOpen={setIsDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="Delete File"
+          description={`Are you sure you want to delete "${fileName}"? This action cannot be undone.`}
+          itemName={fileName}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
       </SidebarMenuItem>
-    );
+    )
   } else {
     const folder = item as TemplateFolder;
     const folderName = folder.folderName;
@@ -296,6 +315,7 @@ const TemplateNode = ({
                   path={currentPath}
                   onAddFile={onAddFile}
                   onAddFolder={onAddFolder}
+                  onDeleteFile={onDeleteFile}
                   onDeleteFolder={onDeleteFolder}
                   onRenameFile={onRenameFile}
                   onRenameFolder={onRenameFolder}
@@ -324,29 +344,19 @@ const TemplateNode = ({
         currentFolderName={folderName}
         />
         
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Folder</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{folderName}" and all its contents? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                  onClick={confirmDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-        </AlertDialog>
+      <DeleteDialog
+      isOpen={isDeleteDialogOpen}
+      setIsOpen={setIsDeleteDialogOpen}
+      onConfirm={confirmDelete}
+      title="Delete Folder"
+      description={`Are you sure you want to delete "${folderName}" and all its contents? This action cannot be undone.`}
+      itemName={folderName}
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      />
       </SidebarMenuItem>
     );
   }
-  return <h1>folder</h1>;
 };
 
 export default TemplateNode;

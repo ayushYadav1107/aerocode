@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { toggleStarMarked } from "@/features/playground/actions"
 import { StarIcon, StarOffIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 import type React from "react"
 import { useState, useEffect, forwardRef } from "react"
 import { toast } from "sonner"
@@ -15,6 +16,7 @@ interface MarkedToggleButtonProps extends React.ComponentPropsWithoutRef<typeof 
 export const MarkedToggleButton = forwardRef<HTMLButtonElement, MarkedToggleButtonProps>(
   ({ markedForRevision, id, onClick, className, children, ...props }, ref) => {
     const [isMarked, setIsMarked] = useState(markedForRevision)
+    const router = useRouter()
 
     useEffect(() => {
       setIsMarked(markedForRevision)
@@ -38,8 +40,7 @@ export const MarkedToggleButton = forwardRef<HTMLButtonElement, MarkedToggleButt
           toast.success("Removed from Favorites successfully")
         }
 
-
-
+        router.refresh()
       } catch (error) {
         console.error("Failed to toggle mark for revision:", error)
         setIsMarked(!newMarkedState) // Revert state if the update fails

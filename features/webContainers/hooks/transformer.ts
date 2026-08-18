@@ -29,8 +29,6 @@ function getKey(item: TemplateItem): string {
     return item.folderName!;
   }
 
-  // Extensionless files (.env, Dockerfile, ...) must keep their bare name,
-  // otherwise they get mounted as "name." and the tooling never finds them.
   return item.fileExtension
     ? `${item.filename}.${item.fileExtension}`
     : item.filename ?? "";

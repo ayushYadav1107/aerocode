@@ -24,9 +24,9 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <SessionProvider session={session}>
-      <html lang="en" suppressHydrationWarning>
-        <body className={` ${poppins.className} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={` ${poppins.className} antialiased`}>
+        <SessionProvider session={session}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -36,8 +36,8 @@ export default async function RootLayout({
             <Toaster />
             {children}
           </ThemeProvider>
-        </body>
-      </html>
-    </SessionProvider>
+        </SessionProvider>
+      </body>
+    </html>
   );
 }

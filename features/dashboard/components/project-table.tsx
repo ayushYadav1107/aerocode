@@ -62,7 +62,6 @@ interface ProjectTableProps {
     data: { title: string; description: string },
   ) => Promise<void>;
   onDeleteProject?: (id: string) => Promise<void>;
-  // The action resolves with the created copy; the table only awaits it.
   onDuplicateProject?: (id: string) => Promise<unknown>;
   onMarkasFavorite?: (id: string) => Promise<void>;
 }
@@ -219,7 +218,7 @@ export default function ProjectTable({
                     <div className="w-8 h-8 rounded-full overflow-hidden">
                       <Image
                         src={project.user.image || "/placeholder.svg"}
-                        alt={project.user.name}
+                        alt={project.user.name ?? "User"}
                         width={32}
                         height={32}
                         className="object-cover"

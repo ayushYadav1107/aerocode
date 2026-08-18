@@ -33,7 +33,7 @@ export const toggleStarMarked = async (playgroundId: string, isChecked: boolean)
             });
         }
 
-        revalidatePath("/dashboard");
+        revalidatePath("/dashboard", "layout");
         return { success: true, isMarked: isChecked };
     } catch (error) {
         console.error("Error updating problem:", error);
@@ -59,9 +59,6 @@ export const createPlayground = async (data: {
             }
         })
 
-        // The dashboard is a server component that reads this list. Without this the
-        // cached payload is reused when navigating back and the new playground is
-        // missing until a full page reload.
         revalidatePath("/dashboard");
 
         return playground;
@@ -70,7 +67,6 @@ export const createPlayground = async (data: {
     }
 }
 
-
 export const getAllPlaygroundForUser = async () => {
     const user = await currentUser();
     try {
@@ -78,6 +74,9 @@ export const getAllPlaygroundForUser = async () => {
         const playground = await db.playground.findMany({
             where: {
                 userId: user?.id!
+            },
+            orderBy: {
+                updatedAt: "desc"
             },
             include: {
                 user: true,
@@ -153,7 +152,6 @@ export const deleteProjectById = async (id: string) => {
         console.log(error)
     }
 }
-
 
 export const editProjectById = async (id: string, data: { title: string, description: string }) => {
     try {

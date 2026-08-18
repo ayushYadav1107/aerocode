@@ -8,6 +8,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import type { WebContainer, WebContainerProcess } from "@webcontainer/api";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { WebLinksAddon } from "xterm-addon-web-links";
@@ -22,7 +23,7 @@ interface TerminalProps {
   webcontainerUrl?: string;
   className?: string;
   theme?: "dark" | "light";
-  webContainerInstance?: any;
+  webContainerInstance?: WebContainer | null;
 }
 
 // Define the methods that will be exposed through the ref
@@ -31,6 +32,55 @@ export interface TerminalRef {
   clearTerminal: () => void;
   focusTerminal: () => void;
 }
+
+const terminalThemes = {
+  dark: {
+    background: "#09090B",
+    foreground: "#FAFAFA",
+    cursor: "#FAFAFA",
+    cursorAccent: "#09090B",
+    selection: "#27272A",
+    black: "#18181B",
+    red: "#EF4444",
+    green: "#22C55E",
+    yellow: "#EAB308",
+    blue: "#3B82F6",
+    magenta: "#A855F7",
+    cyan: "#06B6D4",
+    white: "#F4F4F5",
+    brightBlack: "#3F3F46",
+    brightRed: "#F87171",
+    brightGreen: "#4ADE80",
+    brightYellow: "#FDE047",
+    brightBlue: "#60A5FA",
+    brightMagenta: "#C084FC",
+    brightCyan: "#22D3EE",
+    brightWhite: "#FFFFFF",
+  },
+  light: {
+    background: "#FFFFFF",
+    foreground: "#18181B",
+    cursor: "#18181B",
+    cursorAccent: "#FFFFFF",
+    selection: "#E4E4E7",
+    black: "#18181B",
+    red: "#DC2626",
+    green: "#16A34A",
+    yellow: "#CA8A04",
+    blue: "#2563EB",
+    magenta: "#9333EA",
+    cyan: "#0891B2",
+    white: "#F4F4F5",
+    brightBlack: "#71717A",
+    brightRed: "#EF4444",
+    brightGreen: "#22C55E",
+    brightYellow: "#EAB308",
+    brightBlue: "#3B82F6",
+    brightMagenta: "#A855F7",
+    brightCyan: "#06B6D4",
+    brightWhite: "#FAFAFA",
+  },
+};
 
 const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
   (
@@ -50,71 +100,59 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
     const cursorPosition = useRef<number>(0);
     const commandHistory = useRef<string[]>([]);
     const historyIndex = useRef<number>(-1);
-    const currentProcess = useRef<any>(null);
-    const shellProcess = useRef<any>(null);
+    const currentProcess = useRef<WebContainerProcess | null>(null);
+    const shellProcess = useRef<WebContainerProcess | null>(null);
 
-    const terminalThemes = {
-      dark: {
-        background: "#09090B",
-        foreground: "#FAFAFA",
-        cursor: "#FAFAFA",
-        cursorAccent: "#09090B",
-        selection: "#27272A",
-        black: "#18181B",
-        red: "#EF4444",
-        green: "#22C55E",
-        yellow: "#EAB308",
-        blue: "#3B82F6",
-        magenta: "#A855F7",
-        cyan: "#06B6D4",
-        white: "#F4F4F5",
-        brightBlack: "#3F3F46",
-        brightRed: "#F87171",
-        brightGreen: "#4ADE80",
-        brightYellow: "#FDE047",
-        brightBlue: "#60A5FA",
-        brightMagenta: "#C084FC",
-        brightCyan: "#22D3EE",
-        brightWhite: "#FFFFFF",
-      },
-      light: {
-        background: "#FFFFFF",
-        foreground: "#18181B",
-        cursor: "#18181B",
-        cursorAccent: "#FFFFFF",
-        selection: "#E4E4E7",
-        black: "#18181B",
-        red: "#DC2626",
-        green: "#16A34A",
-        yellow: "#CA8A04",
-        blue: "#2563EB",
-        magenta: "#9333EA",
-        cyan: "#0891B2",
-        white: "#F4F4F5",
-        brightBlack: "#71717A",
-        brightRed: "#EF4444",
-        brightGreen: "#22C55E",
-        brightYellow: "#EAB308",
-        brightBlue: "#3B82F6",
-        brightMagenta: "#A855F7",
-        brightCyan: "#06B6D4",
-        brightWhite: "#FAFAFA",
-      },
-    };
+    const cwd = useRef<string>("/");
+
+    const promptPath = useCallback(() => {
+      return cwd.current === "/" ? "~" : `~${cwd.current}`;
+    }, []);
 
     const writePrompt = useCallback(() => {
       if (term.current) {
-        term.current.write("\r\n$ ");
+        term.current.write(`\r\n\x1b[36m${promptPath()}\x1b[0m $ `);
         currentLine.current = "";
         cursorPosition.current = 0;
       }
+    }, [promptPath]);
+
+    const redrawLine = useCallback(
+      (text: string) => {
+        if (!term.current) return;
+        term.current.write(
+          `\x1b[2K\r\x1b[36m${promptPath()}\x1b[0m $ ${text}`,
+        );
+        currentLine.current = text;
+        cursorPosition.current = text.length;
+      },
+      [promptPath],
+    );
+
+    const resolvePath = useCallback((target: string): string => {
+      const base = target.startsWith("/")
+        ? []
+        : cwd.current.split("/").filter(Boolean);
+
+      const segments = target.replace(/^~\/?/, "/").split("/").filter(Boolean);
+
+      for (const segment of segments) {
+        if (segment === ".") continue;
+        if (segment === "..") base.pop();
+        else base.push(segment);
+      }
+
+      return `/${base.join("/")}`.replace(/\/+/g, "/");
     }, []);
 
     // Expose methods through ref
     useImperativeHandle(ref, () => ({
       writeToTerminal: (data: string) => {
-        if (term.current) {
+        if (!term.current) return;
+        try {
           term.current.write(data);
+        } catch (error) {
+          console.warn("Dropped terminal output:", error);
         }
       },
       clearTerminal: () => {
@@ -141,34 +179,75 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
         historyIndex.current = -1;
 
         try {
-          // Handle built-in commands
-          if (command.trim() === "clear") {
-            term.current.clear();
-            writePrompt();
-            return;
-          }
+          const trimmed = command.trim();
 
-          if (command.trim() === "history") {
-            commandHistory.current.forEach((cmd, index) => {
-              term.current!.writeln(`  ${index + 1}  ${cmd}`);
-            });
-            writePrompt();
-            return;
-          }
-
-          if (command.trim() === "") {
+          if (trimmed === "") {
             writePrompt();
             return;
           }
 
           // Parse command
-          const parts = command.trim().split(" ");
+          const parts = trimmed.split(/\s+/);
           const cmd = parts[0];
           const args = parts.slice(1);
+
+          if (cmd === "clear" || cmd === "cls") {
+            term.current.clear();
+            writePrompt();
+            return;
+          }
+
+          if (cmd === "history") {
+            term.current.writeln("");
+            commandHistory.current.forEach((entry, index) => {
+              term.current!.writeln(`  ${index + 1}  ${entry}`);
+            });
+            writePrompt();
+            return;
+          }
+
+          if (cmd === "help") {
+            term.current.writeln("");
+            term.current.writeln("Built-in commands:");
+            term.current.writeln("  cd <dir>    change directory");
+            term.current.writeln("  pwd         print working directory");
+            term.current.writeln("  clear, cls  clear the screen");
+            term.current.writeln("  history     list previous commands");
+            term.current.writeln("  help        this message");
+            term.current.writeln("");
+            term.current.writeln(
+              "Anything else runs in the container, e.g. ls, cat, npm, node.",
+            );
+            writePrompt();
+            return;
+          }
+
+          if (cmd === "pwd") {
+            term.current.writeln("");
+            term.current.writeln(cwd.current);
+            writePrompt();
+            return;
+          }
+
+          if (cmd === "cd") {
+            const target = args[0] ?? "/";
+            const next = resolvePath(target);
+
+            term.current.writeln("");
+            try {
+              await webContainerInstance.fs.readdir(next);
+              cwd.current = next;
+            } catch {
+              term.current.writeln(`cd: no such directory: ${target}`);
+            }
+            writePrompt();
+            return;
+          }
 
           // Execute in WebContainer
           term.current.writeln("");
           const process = await webContainerInstance.spawn(cmd, args, {
+            cwd: cwd.current,
             terminal: {
               cols: term.current.cols,
               rows: term.current.rows,
@@ -189,20 +268,20 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
           );
 
           // Wait for process to complete
-          const exitCode = await process.exit;
+          await process.exit;
           currentProcess.current = null;
 
           // Show new prompt
           writePrompt();
-        } catch (error) {
+        } catch {
           if (term.current) {
-            term.current.writeln(`\r\nCommand not found: ${command}`);
+            term.current.writeln(`Command not found: ${command}`);
             writePrompt();
           }
           currentProcess.current = null;
         }
       },
-      [webContainerInstance, writePrompt],
+      [webContainerInstance, writePrompt, resolvePath],
     );
 
     const handleTerminalInput = useCallback(
@@ -244,15 +323,7 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
                 historyIndex.current--;
               }
 
-              // Clear current line and write history command
-              const historyCommand =
-                commandHistory.current[historyIndex.current];
-              term.current.write(
-                "\r$ " + " ".repeat(currentLine.current.length) + "\r$ ",
-              );
-              term.current.write(historyCommand);
-              currentLine.current = historyCommand;
-              cursorPosition.current = historyCommand.length;
+              redrawLine(commandHistory.current[historyIndex.current]);
             }
             break;
 
@@ -260,21 +331,10 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
             if (historyIndex.current !== -1) {
               if (historyIndex.current < commandHistory.current.length - 1) {
                 historyIndex.current++;
-                const historyCommand =
-                  commandHistory.current[historyIndex.current];
-                term.current.write(
-                  "\r$ " + " ".repeat(currentLine.current.length) + "\r$ ",
-                );
-                term.current.write(historyCommand);
-                currentLine.current = historyCommand;
-                cursorPosition.current = historyCommand.length;
+                redrawLine(commandHistory.current[historyIndex.current]);
               } else {
                 historyIndex.current = -1;
-                term.current.write(
-                  "\r$ " + " ".repeat(currentLine.current.length) + "\r$ ",
-                );
-                currentLine.current = "";
-                cursorPosition.current = 0;
+                redrawLine("");
               }
             }
             break;
@@ -292,8 +352,25 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
             break;
         }
       },
-      [executeCommand, writePrompt],
+      [executeCommand, writePrompt, redrawLine],
     );
+
+    const inputHandler = useRef(handleTerminalInput);
+    useEffect(() => {
+      inputHandler.current = handleTerminalInput;
+    }, [handleTerminalInput]);
+
+    const safeFit = useCallback(() => {
+      const host = terminalRef.current;
+      if (!term.current || !fitAddon.current || !host) return;
+      if (host.offsetWidth === 0 || host.offsetHeight === 0) return;
+
+      try {
+        fitAddon.current.fit();
+      } catch (error) {
+        console.warn("Terminal fit skipped:", error);
+      }
+    }, []);
 
     const initializeTerminal = useCallback(() => {
       if (!terminalRef.current || term.current) return;
@@ -326,13 +403,9 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
       searchAddon.current = searchAddonInstance;
       term.current = terminal;
 
-      // Handle terminal input
-      terminal.onData(handleTerminalInput);
+      terminal.onData((data) => inputHandler.current(data));
 
-      // Initial fit
-      setTimeout(() => {
-        fitAddonInstance.fit();
-      }, 100);
+      requestAnimationFrame(() => safeFit());
 
       // Welcome message
       terminal.writeln("🚀 WebContainer Terminal");
@@ -340,7 +413,7 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
       writePrompt();
 
       return terminal;
-    }, [theme, handleTerminalInput, writePrompt]);
+    }, [theme, writePrompt, safeFit]);
 
     const connectToWebContainer = useCallback(async () => {
       if (!webContainerInstance || !term.current) return;
@@ -409,33 +482,38 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
     useEffect(() => {
       initializeTerminal();
 
-      // Handle resize
+      let pendingFit = 0;
       const resizeObserver = new ResizeObserver(() => {
-        if (fitAddon.current) {
-          setTimeout(() => {
-            fitAddon.current?.fit();
-          }, 100);
-        }
+        cancelAnimationFrame(pendingFit);
+        pendingFit = requestAnimationFrame(() => safeFit());
       });
 
       if (terminalRef.current) {
         resizeObserver.observe(terminalRef.current);
       }
 
+      const killedProcess = currentProcess;
+      const killedShell = shellProcess;
+
       return () => {
+        cancelAnimationFrame(pendingFit);
         resizeObserver.disconnect();
-        if (currentProcess.current) {
-          currentProcess.current.kill();
+        if (killedProcess.current) {
+          killedProcess.current.kill();
+          killedProcess.current = null;
         }
-        if (shellProcess.current) {
-          shellProcess.current.kill();
+        if (killedShell.current) {
+          killedShell.current.kill();
+          killedShell.current = null;
         }
         if (term.current) {
           term.current.dispose();
           term.current = null;
         }
+        fitAddon.current = null;
+        searchAddon.current = null;
       };
-    }, [initializeTerminal]);
+    }, [initializeTerminal, safeFit]);
 
     useEffect(() => {
       if (webContainerInstance && term.current && !isConnected) {
@@ -520,15 +598,15 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(
           </div>
         </div>
 
-        {/* Terminal Content */}
-        <div className="flex-1 relative">
-          <div
-            ref={terminalRef}
-            className="absolute inset-0 p-2"
-            style={{
-              background: terminalThemes[theme].background,
-            }}
-          />
+        {/* Terminal Content.
+            No padding on the host element: FitAddon measures it to derive rows and
+            columns, and padding makes that measurement disagree with the area xterm
+            actually paints - which is what left blank strips and clipped text. */}
+        <div
+          className="flex-1 relative min-h-0 min-w-0"
+          style={{ background: terminalThemes[theme].background }}
+        >
+          <div ref={terminalRef} className="absolute inset-0 overflow-hidden" />
         </div>
       </div>
     );

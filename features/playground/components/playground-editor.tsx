@@ -5,6 +5,7 @@ import { TemplateFile } from '../types'
 import { findFilePath } from '../libs'
 import { useFileExplorer } from '../hooks/useFileExplorer'
 import {configureMonaco, defaultEditorOptions, getEditorLanguage} from '@/features/playground/libs/editor-config';
+import { toMonacoOverrides, useEditorSettings } from '@/features/dashboard/hooks/useEditorSettings';
 
 interface PlaygroundEditorProps {
     activeFile:TemplateFile | undefined
@@ -19,6 +20,27 @@ const PlaygroundEditor = ({
     const editorRef = useRef<any>(null);
     const monacoRef = useRef<Monaco | null>(null);
     const templateData = useFileExplorer((state) => state.templateData);
+
+    const fontSize = useEditorSettings((state) => state.fontSize);
+    const tabSize = useEditorSettings((state) => state.tabSize);
+    const wordWrap = useEditorSettings((state) => state.wordWrap);
+    const minimap = useEditorSettings((state) => state.minimap);
+    const lineNumbers = useEditorSettings((state) => state.lineNumbers);
+
+    const editorOptions = useMemo(
+        () => ({
+            ...defaultEditorOptions,
+            ...toMonacoOverrides({
+                fontSize,
+                tabSize,
+                wordWrap,
+                minimap,
+                lineNumbers,
+                autoSave: false,
+            }),
+        }),
+        [fontSize, tabSize, wordWrap, minimap, lineNumbers],
+    );
 
     const handleEditorDidMount = (editor:any, monaco:Monaco) => {
         editorRef.current = editor;
@@ -42,8 +64,6 @@ const PlaygroundEditor = ({
         return `file:///${filePath.replace(/^\/+/, "")}`
     }, [activeFile, templateData])
 
-  // w-full + overflow-hidden keeps Monaco's own measurements from widening the
-  // panel it lives in, which pushed the layout sideways.
   return (
     <div className='h-full w-full relative overflow-hidden'>
         {/* ai thinking */ }
@@ -55,7 +75,7 @@ const PlaygroundEditor = ({
         onMount={handleEditorDidMount}
         language={activeFile ? getEditorLanguage(activeFile.fileExtension || "") : "plaintext"}
         //@ts-ignore
-        options={defaultEditorOptions}
+        options={editorOptions}
         />
     </div>
   )

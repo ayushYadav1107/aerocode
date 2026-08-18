@@ -75,7 +75,14 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
 
   setTemplateData: (data) => set({ templateData: data }),
   setPlaygroundId(id) {
-    set({ playgroundId: id });
+    if (get().playgroundId === id) return;
+
+    set({
+      playgroundId: id,
+      openFiles: [],
+      activeFileId: null,
+      editorContent: "",
+    });
   },
   setEditorContent: (content) => set({ editorContent: content }),
   setOpenFiles: (files) => set({ openFiles: files }),

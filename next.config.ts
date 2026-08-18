@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // WebContainer runs in the browser and needs cross-origin isolation.
   async headers(){
     return [
       {
@@ -24,7 +23,6 @@ const nextConfig: NextConfig = {
             value: 'same-origin',
           },
           {
-            // Must match the `coep` option passed to WebContainer.boot()
             key: 'Cross-Origin-Embedder-Policy',
             value: WEBCONTAINER_COEP,
           }

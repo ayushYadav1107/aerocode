@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -20,7 +19,6 @@ import {
   Database,
   FlameIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -63,12 +61,9 @@ export function DashboardSidebar({
   initialPlaygroundData: PlaygroundData[];
 }) {
   const pathname = usePathname();
-  const [starredPlaygrounds, setStarredPlaygrounds] = useState(
-    initialPlaygroundData.filter((p) => p.starred),
-  );
-  const [recentPlaygrounds, setRecentPlaygrounds] = useState(
-    initialPlaygroundData,
-  );
+
+  const starredPlaygrounds = initialPlaygroundData.filter((p) => p.starred);
+  const recentPlaygrounds = initialPlaygroundData.slice(0, 5);
 
   return (
     <Sidebar variant="inset" collapsible="icon" className="border-1 border-r">
@@ -180,8 +175,12 @@ export function DashboardSidebar({
                     );
                   })}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="View all">
-                  <Link href="/playgrounds">
+                <SidebarMenuButton
+                  asChild
+                  tooltip="View all"
+                  isActive={pathname === "/dashboard/playgrounds"}
+                >
+                  <Link href="/dashboard/playgrounds">
                     <span className="text-sm text-muted-foreground">
                       View all playgrounds
                     </span>
@@ -195,8 +194,12 @@ export function DashboardSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings">
-              <Link href="/settings">
+            <SidebarMenuButton
+              asChild
+              tooltip="Settings"
+              isActive={pathname === "/dashboard/settings"}
+            >
+              <Link href="/dashboard/settings">
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>

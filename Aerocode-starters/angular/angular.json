@@ -1,14 +1,14 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "cli": {
-    "analytics": "1e1de97b-a744-405a-8b5a-0397bb3d01ce"
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
     "demo": {
       "architect": {
         "build": {
-          "builder": "@angular/build:application",
+          "builder": "@angular-devkit/build-angular:application",
           "configurations": {
             "development": {
               "extractLicenses": false,
@@ -29,14 +29,18 @@
             "index": "src/index.html",
             "browser": "src/main.ts",
             "outputPath": "dist/demo",
-            "polyfills": [],
+            "polyfills": ["zone.js"],
             "scripts": [],
             "styles": ["src/global_styles.css"],
             "tsConfig": "tsconfig.app.json"
           }
         },
         "serve": {
-          "builder": "@angular/build:dev-server",
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "host": "0.0.0.0",
+            "disableHostCheck": true
+          },
           "configurations": {
             "development": {
               "buildTarget": "demo:build:development"

@@ -18,8 +18,7 @@ const DashboardMainPage = async () => {
         {playgrounds && playgrounds.length === 0 ? (
           <EmptyState title='No projects found' description='Create a new project to get started!' imageSrc='/empty-state.svg' />
         ) : (
-          <ProjectTable 
-          // @ts-ignore
+          <ProjectTable
             projects={playgrounds || []}
             onDeleteProject={deleteProjectById}
             onUpdateProject={editProjectById}

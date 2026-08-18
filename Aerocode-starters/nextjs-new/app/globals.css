@@ -1,26 +1,93 @@
-@import "tailwindcss";
-
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --muted: #52525b;
+  --border: rgba(0, 0, 0, 0.1);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --muted: #a1a1aa;
+    --border: rgba(255, 255, 255, 0.145);
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 32rem;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+
+.button:hover {
+  background: var(--border);
+}
+
+code {
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  background: var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
 }

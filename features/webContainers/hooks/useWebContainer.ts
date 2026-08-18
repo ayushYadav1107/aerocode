@@ -12,14 +12,6 @@ interface UseWebContainerReturn {
     destroy:()=>void;
 }
 
-// Only a single WebContainer can be booted per page, and booting is expensive, so
-// the boot is cached and shared by React StrictMode's double-mount and by every
-// remount of the playground page.
-//
-// The cache lives on globalThis rather than in module scope on purpose: HMR
-// re-evaluates this module while @webcontainer/api keeps the instance it already
-// booted, and a module-scoped cache would come back null and boot a second time,
-// throwing "Only a single WebContainer instance can be booted".
 const BOOT_CACHE_KEY = '__aerocode_webcontainer_boot__';
 
 type BootCache = { promise: Promise<WebContainer> | null };
@@ -31,12 +23,6 @@ const BOOT_TIMEOUT_MS = 45_000;
 
 const HEADLESS_URL = 'https://stackblitz.com/headless';
 
-/**
- * boot() resolves only when the hidden stackblitz.com/headless iframe completes a
- * postMessage handshake, and it never rejects when that iframe is blocked. When the
- * boot timer fires, work out *which* way it failed so the error names a real cause
- * instead of listing possibilities.
- */
 async function diagnoseBootFailure(): Promise<string> {
     console.error('WebContainer environment:', {
         href: window.location.href,
@@ -48,8 +34,6 @@ async function diagnoseBootFailure(): Promise<string> {
         userAgent: navigator.userAgent,
     });
 
-    // WebContainer cannot boot inside an embedded frame: VS Code's Simple Browser,
-    // an IDE preview pane, or any iframed host. It needs a top-level browser tab.
     if (window.self !== window.top) {
         return 'This page is running inside an iframe (a VS Code Simple Browser, IDE preview pane or similar). WebContainer only works in a top-level browser tab - open the app directly in Chrome or Edge.';
     }
@@ -74,9 +58,6 @@ async function diagnoseBootFailure(): Promise<string> {
 }
 
 async function bootWebContainer(): Promise<WebContainer> {
-    // WebContainer needs COOP/COEP headers. Without them boot() can hang forever
-    // instead of failing, which looks like a frozen loading screen. Checked here
-    // rather than in the calling effect so the failure arrives as a rejection.
     if (!window.crossOriginIsolated) {
         throw new Error(
             'This page is not cross-origin isolated. WebContainer requires the ' +
@@ -85,21 +66,13 @@ async function bootWebContainer(): Promise<WebContainer> {
     }
 
     if (!bootCache.promise) {
-        // The SDK only acts on 'init' and 'warning' messages and drops the rest, so
-        // log everything the runtime frame sends. A refusal (unsupported browser,
-        // blocked storage, auth) shows up here and nowhere else.
         window.addEventListener('message', (event) => {
             if (event.origin.includes('stackblitz.com')) {
                 console.info('[webcontainer] message from runtime:', event.data);
             }
         });
 
-        // `coep` is forwarded to the WebContainer runtime iframe so it is served
-        // with headers compatible with ours. If the two disagree the browser
-        // blocks the iframe and boot() hangs forever instead of rejecting.
         bootCache.promise = WebContainer.boot({ coep: WEBCONTAINER_COEP }).catch((error) => {
-            // If a previous module evaluation already booted, adopt that instance
-            // instead of dying: the container and its iframe are still alive.
             const existing = (WebContainer as unknown as { _instance?: WebContainer })._instance;
             if (existing) {
                 return existing;
@@ -122,16 +95,12 @@ export const useWebContainer = (): UseWebContainerReturn => {
         let mounted = true;
         let settled = false;
 
-        // boot() resolves only once the hidden stackblitz.com/headless iframe posts
-        // back. If that iframe is blocked it never rejects, so surface a hint on a
-        // timer rather than racing - a slow boot that does arrive still works.
         const timer = setTimeout(async () => {
             if (!mounted || settled) return;
 
             const diagnosis = await diagnoseBootFailure();
             console.error('WebContainer boot timed out:', diagnosis);
 
-            // The boot may still be in flight - if it lands later it clears this.
             if (mounted && !settled) {
                 setError(`WebContainer did not boot within ${BOOT_TIMEOUT_MS / 1000}s. ${diagnosis}`);
                 setIsLoading(false);
@@ -158,8 +127,6 @@ export const useWebContainer = (): UseWebContainerReturn => {
         return () =>{
             mounted = false;
             clearTimeout(timer);
-            // Deliberately no teardown here: the instance is shared across mounts and
-            // tearing it down on unmount kills the running dev server on every remount.
         }
     },[])
 

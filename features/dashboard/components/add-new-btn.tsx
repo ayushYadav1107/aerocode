@@ -28,8 +28,6 @@ const AddNewButton = () => {
       const res = await createPlayground(data);
 
       if (!res?.id) {
-        // Without this the flow reported success and navigated to
-        // /playground/undefined whenever creation failed.
         toast.error("Could not create the playground. Please try again.");
         return;
       }
@@ -37,8 +35,6 @@ const AddNewButton = () => {
       toast.success("Playground created successfully");
       setIsModalOpen(false)
 
-      // Drops the cached dashboard payload so the new playground is there when the
-      // user navigates back, rather than only after a manual reload.
       router.refresh()
       router.push(`/playground/${res.id}`)
     } catch (error) {

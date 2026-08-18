@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Tooltip,
@@ -59,6 +59,7 @@ import PlaygroundEditor from "@/features/playground/components/playground-editor
 import { useWebContainer } from "@/features/webContainers/hooks/useWebContainer";
 import WebContainerPreview from "@/features/webContainers/components/webcontainer-preview";
 import LoadingStep from "@/components/ui/loader";
+import { findFilePath } from "@/features/playground/libs";
 
 const Page = () => {
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
@@ -91,7 +92,10 @@ const Page = () => {
     error: containerError,
     instance,
     writeFileSync,
-  } = useWebContainer();
+    //@ts-ignore
+  } = useWebContainer({ templateData });
+
+  const lastSyncedContent = useRef<Map<string, string>>(new Map());
 
   // Keep the file explorer store in sync with the loaded playground
   useEffect(() => {
@@ -99,12 +103,84 @@ const Page = () => {
   }, [id, setPlaygroundId]);
 
   useEffect(() => {
+    return () => {
+      useFileExplorer.getState().closeAllFiles();
+    };
+  }, []);
+
+  useEffect(() => {
     if (templateData) setTemplateData(templateData);
-  }, [templateData, setTemplateData]);
+  }, [templateData, setTemplateData, openFiles.length]);
 
   const { setOpen: setSidebarOpen } = useSidebar();
   const [isNewFileDialogOpen, setIsNewFileDialogOpen] = useState(false);
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
+
+   const wrappedHandleAddFile = useCallback(
+    (newFile: TemplateFile, parentPath: string) => {
+      return handleAddFile(
+        newFile,
+        parentPath,
+        writeFileSync!,
+        instance,
+        saveTemplateData
+      );
+    },
+    [handleAddFile, writeFileSync, instance, saveTemplateData]
+  );
+
+  const wrappedHandleAddFolder = useCallback(
+    (newFolder: TemplateFolder, parentPath: string) => {
+      return handleAddFolder(newFolder, parentPath, instance, saveTemplateData);
+    },
+    [handleAddFolder, instance, saveTemplateData]
+  );
+
+  const wrappedHandleDeleteFile = useCallback(
+    (file: TemplateFile, parentPath: string) => {
+      return handleDeleteFile(file, parentPath, saveTemplateData);
+    },
+    [handleDeleteFile, saveTemplateData]
+  );
+
+  const wrappedHandleDeleteFolder = useCallback(
+    (folder: TemplateFolder, parentPath: string) => {
+      return handleDeleteFolder(folder, parentPath, saveTemplateData);
+    },
+    [handleDeleteFolder, saveTemplateData]
+  );
+
+  const wrappedHandleRenameFile = useCallback(
+    (
+      file: TemplateFile,
+      newFilename: string,
+      newExtension: string,
+      parentPath: string
+    ) => {
+      return handleRenameFile(
+        file,
+        newFilename,
+        newExtension,
+        parentPath,
+        saveTemplateData
+      );
+    },
+    [handleRenameFile, saveTemplateData]
+  );
+
+  const wrappedHandleRenameFolder = useCallback(
+    (folder: TemplateFolder, newFolderName: string, parentPath: string) => {
+      return handleRenameFolder(
+        folder,
+        newFolderName,
+        parentPath,
+        saveTemplateData
+      );
+    },
+    [handleRenameFolder, saveTemplateData]
+  );
+
+
 
   const activeFile = openFiles.find((file) => file.id === activeFileId);
   const hasUnsavedChanges = openFiles.some((file) => file.hasUnsavedChanges);
@@ -141,10 +217,125 @@ const Page = () => {
     openFile(file);
   };
 
-  if(error){
+  const handleSave = useCallback(
+    async (fileId?: string) => {
+      const targetFileId = fileId || activeFileId;
+
+      if (!targetFileId) return;
+
+      const fileToSave = openFiles.find((f) => f.id === targetFileId);
+
+      if (!fileToSave) return;
+
+      const latestTemplateData = useFileExplorer.getState().templateData;
+
+      if (!latestTemplateData) return;
+
+      try {
+        const filePath = findFilePath(fileToSave, latestTemplateData);
+        if (!filePath) {
+          toast.error(
+            `Could not find path for file: ${fileToSave.filename}.${fileToSave.fileExtension}`,
+          );
+          return;
+        }
+
+        const updatedTemplateData = JSON.parse(
+          JSON.stringify(latestTemplateData),
+        );
+        const updateFileContent = (items: any[]): any[] =>
+          items.map((item) => {
+            if ("folderName" in item) {
+              return { ...item, items: updateFileContent(item.items) };
+            } else if (
+              item.filename === fileToSave.filename &&
+              item.fileExtension === fileToSave.fileExtension
+            ) {
+              return { ...item, content: fileToSave.content };
+            }
+            return item;
+          });
+        updatedTemplateData.items = updateFileContent(
+          updatedTemplateData.items,
+        );
+
+        // Sync with WebContainer
+        if (writeFileSync) {
+          await writeFileSync(filePath, fileToSave.content);
+          lastSyncedContent.current.set(fileToSave.id, fileToSave.content);
+          if (instance && instance.fs) {
+            await instance.fs.writeFile(filePath, fileToSave.content);
+          }
+        }
+
+        await saveTemplateData(updatedTemplateData);
+        setTemplateData(updatedTemplateData);
+
+        // Update open files
+        const updatedOpenFiles = openFiles.map((f) =>
+          f.id === targetFileId
+            ? {
+                ...f,
+                content: fileToSave.content,
+                originalContent: fileToSave.content,
+                hasUnsavedChanges: false,
+              }
+            : f,
+        );
+        setOpenFiles(updatedOpenFiles);
+
+        toast.success(
+          `Saved ${fileToSave.filename}.${fileToSave.fileExtension}`,
+        );
+      } catch (error) {
+        console.error("Error saving file:", error);
+        toast.error(
+          `Failed to save ${fileToSave.filename}.${fileToSave.fileExtension}`,
+        );
+        throw error;
+      }
+  }, [
+    activeFileId,
+    openFiles,
+    writeFileSync,
+    instance,
+    saveTemplateData,
+    setTemplateData,
+    setOpenFiles,
+  ]);
+
+  const handleSaveAll = async () => {
+    const unsavedFiles = openFiles.filter((f) => f.hasUnsavedChanges);
+
+    if (unsavedFiles.length === 0) {
+      toast.info("No unsaved changes");
+      return;
+    }
+
+    try {
+      await Promise.all(unsavedFiles.map((f) => handleSave(f.id)));
+      toast.success(`Saved ${unsavedFiles.length} file(s)`);
+    } catch (error) {
+      toast.error("Failed to save some files");
+    }
+  };
+
+  // Add event to save file by click ctrl + s
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
+
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] p-4">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4"/>
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-xl font-semibold text-red-600 mb-2">
           Something went wrong
         </h2>
@@ -153,10 +344,10 @@ const Page = () => {
           Try again
         </Button>
       </div>
-    )
-  };
+    );
+  }
 
-  if(isLoading){
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] p-4">
         <div className="w-full max-w-md p-6 rounded-lg shadow-sm border">
@@ -164,21 +355,21 @@ const Page = () => {
             Loading Playground
           </h2>
           <div className="mb-8">
-            <LoadingStep 
+            <LoadingStep
               currentStep={1}
               step={1}
               label="Loading playground data"
             />
-            <LoadingStep 
-            currentStep={2}
-            step={2}
-            label="Setting up environment"
+            <LoadingStep
+              currentStep={2}
+              step={2}
+              label="Setting up environment"
             />
             <LoadingStep currentStep={3} step={3} label="Ready to code" />
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -188,6 +379,13 @@ const Page = () => {
           data={templateData!}
           onFileSelect={handleFileSelect}
           selectedFile={activeFile}
+          title="File Explorer"
+          onAddFile={wrappedHandleAddFile}
+          onAddFolder={wrappedHandleAddFolder}
+          onDeleteFile={wrappedHandleDeleteFile}
+          onDeleteFolder={wrappedHandleDeleteFolder}
+          onRenameFile={wrappedHandleRenameFile}
+          onRenameFolder={wrappedHandleRenameFolder}
         />
 
         <SidebarInset>
@@ -213,7 +411,7 @@ const Page = () => {
                     <Button
                       size={"sm"}
                       variant={"outline"}
-                      onClick={() => {}}
+                      onClick={()=>handleSave()}
                       disabled={!activeFile || !activeFile.hasUnsavedChanges}
                     >
                       <Save className="size-4" />
@@ -227,7 +425,7 @@ const Page = () => {
                     <Button
                       size={"sm"}
                       variant={"outline"}
-                      onClick={() => {}}
+                      onClick={handleSaveAll}
                       disabled={!activeFile || !activeFile.hasUnsavedChanges}
                     >
                       <Save className="size-4" /> All
@@ -330,10 +528,6 @@ const Page = () => {
                     className="h-full"
                     orientation="horizontal"
                   >
-                    {/* min-w-0 matters: panels are flex children, and the default
-                        min-width:auto lets the editor and terminal force the group
-                        wider than the viewport, which is what caused the sideways
-                        scrolling. */}
                     <ResizablePanel
                       defaultSize={50}
                       minSize={20}

@@ -97,7 +97,7 @@ interface TemplateFileTreeProps {
   ) => void;
 }
 
-const TemplateFileTree = ({
+ const TemplateFileTree = ({
   data,
   onFileSelect,
   selectedFile,
@@ -120,6 +120,29 @@ const TemplateFileTree = ({
   const handleAddRootFolder = () => {
     setIsNewFolderDialogOpen(true);
   };
+
+  const handleCreateFile = (filename: string, extension: string) => {
+    if (onAddFile && isRootFolder) {
+      const newFile: TemplateFile = {
+        filename,
+        fileExtension: extension,
+        content: "",
+      }
+      onAddFile(newFile, "")
+    }
+    setIsNewFileDialogOpen(false)
+  }
+
+  const handleCreateFolder = (folderName: string) => {
+    if (onAddFolder && isRootFolder) {
+      const newFolder: TemplateFolder = {
+        folderName,
+        items: [],
+      }
+      onAddFolder(newFolder, "")
+    }
+    setIsNewFolderDialogOpen(false)
+  }
 
   return (
     <Sidebar>
@@ -187,12 +210,12 @@ const TemplateFileTree = ({
   <NewFileDialog 
   isOpen={isNewFileDialogOpen}
   onClose={() =>{setIsNewFileDialogOpen(false)}}
-  onCreateFile={()=>{}}
+  onCreateFile={handleCreateFile}
   />
   <NewFolderDialog 
   isOpen={isNewFolderDialogOpen}
   onClose={() =>{setIsNewFolderDialogOpen(false)}}
-  onCreateFolder={()=>{}}
+  onCreateFolder={handleCreateFolder}
   />
     </Sidebar>
   );
@@ -472,5 +495,46 @@ export function RenameFolderDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface DeleteDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  itemName?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+}
+
+export function DeleteDialog({
+  isOpen,
+  setIsOpen,
+  onConfirm,
+  title,
+  description,
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
+}: DeleteDialogProps) {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
