@@ -60,6 +60,7 @@ import { useWebContainer } from "@/features/webContainers/hooks/useWebContainer"
 import WebContainerPreview from "@/features/webContainers/components/webcontainer-preview";
 import LoadingStep from "@/components/ui/loader";
 import { findFilePath } from "@/features/playground/libs";
+import ToggleAI from "@/features/playground/components/toggle-ai";
 
 const Page = () => {
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
@@ -116,38 +117,38 @@ const Page = () => {
   const [isNewFileDialogOpen, setIsNewFileDialogOpen] = useState(false);
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
 
-   const wrappedHandleAddFile = useCallback(
+  const wrappedHandleAddFile = useCallback(
     (newFile: TemplateFile, parentPath: string) => {
       return handleAddFile(
         newFile,
         parentPath,
         writeFileSync!,
         instance,
-        saveTemplateData
+        saveTemplateData,
       );
     },
-    [handleAddFile, writeFileSync, instance, saveTemplateData]
+    [handleAddFile, writeFileSync, instance, saveTemplateData],
   );
 
   const wrappedHandleAddFolder = useCallback(
     (newFolder: TemplateFolder, parentPath: string) => {
       return handleAddFolder(newFolder, parentPath, instance, saveTemplateData);
     },
-    [handleAddFolder, instance, saveTemplateData]
+    [handleAddFolder, instance, saveTemplateData],
   );
 
   const wrappedHandleDeleteFile = useCallback(
     (file: TemplateFile, parentPath: string) => {
       return handleDeleteFile(file, parentPath, saveTemplateData);
     },
-    [handleDeleteFile, saveTemplateData]
+    [handleDeleteFile, saveTemplateData],
   );
 
   const wrappedHandleDeleteFolder = useCallback(
     (folder: TemplateFolder, parentPath: string) => {
       return handleDeleteFolder(folder, parentPath, saveTemplateData);
     },
-    [handleDeleteFolder, saveTemplateData]
+    [handleDeleteFolder, saveTemplateData],
   );
 
   const wrappedHandleRenameFile = useCallback(
@@ -155,17 +156,17 @@ const Page = () => {
       file: TemplateFile,
       newFilename: string,
       newExtension: string,
-      parentPath: string
+      parentPath: string,
     ) => {
       return handleRenameFile(
         file,
         newFilename,
         newExtension,
         parentPath,
-        saveTemplateData
+        saveTemplateData,
       );
     },
-    [handleRenameFile, saveTemplateData]
+    [handleRenameFile, saveTemplateData],
   );
 
   const wrappedHandleRenameFolder = useCallback(
@@ -174,13 +175,11 @@ const Page = () => {
         folder,
         newFolderName,
         parentPath,
-        saveTemplateData
+        saveTemplateData,
       );
     },
-    [handleRenameFolder, saveTemplateData]
+    [handleRenameFolder, saveTemplateData],
   );
-
-
 
   const activeFile = openFiles.find((file) => file.id === activeFileId);
   const hasUnsavedChanges = openFiles.some((file) => file.hasUnsavedChanges);
@@ -294,15 +293,17 @@ const Page = () => {
         );
         throw error;
       }
-  }, [
-    activeFileId,
-    openFiles,
-    writeFileSync,
-    instance,
-    saveTemplateData,
-    setTemplateData,
-    setOpenFiles,
-  ]);
+    },
+    [
+      activeFileId,
+      openFiles,
+      writeFileSync,
+      instance,
+      saveTemplateData,
+      setTemplateData,
+      setOpenFiles,
+    ],
+  );
 
   const handleSaveAll = async () => {
     const unsavedFiles = openFiles.filter((f) => f.hasUnsavedChanges);
@@ -411,7 +412,7 @@ const Page = () => {
                     <Button
                       size={"sm"}
                       variant={"outline"}
-                      onClick={()=>handleSave()}
+                      onClick={() => handleSave()}
                       disabled={!activeFile || !activeFile.hasUnsavedChanges}
                     >
                       <Save className="size-4" />
@@ -435,19 +436,11 @@ const Page = () => {
                 </Tooltip>
 
                 {/* Todo  AI thinking*/}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size={"sm"}
-                      variant={"outline"}
-                      onClick={() => {}}
-                      disabled={!activeFile || !activeFile.hasUnsavedChanges}
-                    >
-                      <Bot className="size-4" /> AI
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Toggle AI</TooltipContent>
-                </Tooltip>
+                <ToggleAI
+                  isEnabled={false}
+                  onToggle={() => {}}
+                  suggestionLoading={false}
+                />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
