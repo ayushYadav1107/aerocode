@@ -86,23 +86,23 @@ Chat history is stored per playground and scoped per user, so it survives reload
 
 ## 📸 Screenshots
 
+### The editor
+Monaco on the left. On the right, a WebContainer boots the project — mounting files and running `npm install` in the tab — with a live terminal underneath. The preview appears here once the dev server starts.
+
+![Editor with WebContainer booting and terminal](docs/images/editor.png)
+
 ### Dashboard
-Every playground you own, with templates, star marks and quick actions.
+Start a playground from a template or import a GitHub repository, then manage everything you have built.
 
 ![Dashboard](docs/images/dashboard.png)
 
-### The editor
-Monaco on the left, live preview and a real terminal on the right — dependencies installing inside the browser.
-
-![Editor with WebContainer and terminal](docs/images/editor.png)
-
 ### AI assistant
-Chat, Review, Fix and Optimize modes. Every code block it returns carries **Insert into editor**, copy, download and run.
+Chat, Review, Fix and Optimize modes in a side panel that tracks the file you have open — note *"Working on package.json"*. Replies render as rich code blocks with **Insert into editor**, copy, download and run.
 
 ![AI chat panel](docs/images/ai-chat.png)
 
 ### Playground welcome
-Walkthroughs, fuzzy file search and the shortcuts you need, before you open a file.
+Walkthroughs, fuzzy file search and keyboard shortcuts, before you open a file.
 
 ![Playground welcome screen](docs/images/playground-welcome.png)
 
