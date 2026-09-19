@@ -61,12 +61,15 @@ import WebContainerPreview from "@/features/webContainers/components/webcontaine
 import LoadingStep from "@/components/ui/loader";
 import { findFilePath } from "@/features/playground/libs";
 import ToggleAI from "@/features/playground/components/toggle-ai";
+import { useAISuggestions } from "@/features/ai/hooks/useAISuggestion";
 
 const Page = () => {
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
   const { id } = useParams<{ id: string }>();
   const { playgroundData, templateData, isLoading, error, saveTemplateData } =
     usePlayground(id);
+
+  const aiSuggestion = useAISuggestions();
   const {
     activeFileId,
     closeAllFiles,
@@ -437,9 +440,9 @@ const Page = () => {
 
                 {/* Todo  AI thinking*/}
                 <ToggleAI
-                  isEnabled={false}
-                  onToggle={() => {}}
-                  suggestionLoading={false}
+                  isEnabled={aiSuggestion.isEnabled}
+                  onToggle={aiSuggestion.toggleEnabled}
+                  suggestionLoading={aiSuggestion.isLoading}
                 />
 
                 <DropdownMenu>
@@ -531,6 +534,19 @@ const Page = () => {
                         content={activeFile?.content || ""}
                         onContentChange={(value) =>
                           activeFileId && updateFileContent(activeFileId, value)
+                        }
+                        suggestion={aiSuggestion.suggestion}
+                        suggestionLoading={aiSuggestion.isLoading}
+                        suggestionPosition={aiSuggestion.position}
+                        // the editor already inserted the text; only clear state here
+                        onAcceptSuggestion={(editor) =>
+                          aiSuggestion.clearSuggestion(editor)
+                        }
+                        onRejectSuggestion={(editor) =>
+                          aiSuggestion.rejectSuggestion(editor)
+                        }
+                        onTriggerSuggestion={(type, editor) =>
+                          aiSuggestion.fetchSuggestion(type, editor)
                         }
                       />
                     </ResizablePanel>
