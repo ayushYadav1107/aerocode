@@ -1,7 +1,7 @@
 // Groq's chat completions endpoint is OpenAI-compatible, so this is a plain
 // fetch rather than a dependency. Free tier: https://console.groq.com/keys
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile"
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b"
 const TIMEOUT_MS = Number(process.env.GROQ_TIMEOUT_MS) || 30_000
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string }
