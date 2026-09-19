@@ -8,7 +8,9 @@ import {
   configureMonaco,
   defaultEditorOptions,
   getEditorLanguage,
+  setEditorTheme,
 } from "@/features/playground/libs/editor-config";
+import { useTheme } from "next-themes";
 import {
   toMonacoOverrides,
   useEditorSettings,
@@ -36,6 +38,9 @@ const PlaygroundEditor = ({
   onRejectSuggestion,
   onTriggerSuggestion,
 }: PlaygroundEditorProps) => {
+  const { resolvedTheme } = useTheme();
+  const editorTheme = resolvedTheme === "light" ? "light" : "dark";
+
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const inlineCompletionProviderRef = useRef<any>(null);
@@ -370,7 +375,7 @@ const PlaygroundEditor = ({
       cursorSmoothCaretAnimation: "on",
     });
 
-    configureMonaco(monaco);
+    configureMonaco(monaco, editorTheme);
 
     // Keyboard shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
@@ -544,6 +549,11 @@ const PlaygroundEditor = ({
   useEffect(() => {
     updateEditorLanguage();
   }, [activeFile]);
+
+  // follow the app theme when it is toggled after mount
+  useEffect(() => {
+    if (monacoRef.current) setEditorTheme(monacoRef.current, editorTheme);
+  }, [editorTheme]);
 
   // Cleanup on unmount
   useEffect(() => {

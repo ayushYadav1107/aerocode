@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   Tooltip,
@@ -30,6 +31,7 @@ import {
   Settings,
   Bot,
   FileText,
+  Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -395,6 +397,16 @@ const Page = () => {
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" asChild>
+                  <Link href="/dashboard" aria-label="Back to dashboard">
+                    <Home className="size-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Back to Dashboard</TooltipContent>
+            </Tooltip>
             <Separator orientation="vertical" className="mr-2 h-4" />
 
             <div className="flex flex-1 items-center gap-2">
@@ -443,6 +455,29 @@ const Page = () => {
                   isEnabled={aiSuggestion.isEnabled}
                   onToggle={aiSuggestion.toggleEnabled}
                   suggestionLoading={aiSuggestion.isLoading}
+                  playgroundId={id}
+                  activeFile={
+                    activeFile && {
+                      name: `${activeFile.filename}.${activeFile.fileExtension}`,
+                      content: activeFile.content,
+                      language: activeFile.fileExtension,
+                    }
+                  }
+                  // ponytail: appends at end of file; insert at cursor needs editor ref plumbing
+                  onInsertCode={(code) => {
+                    if (!activeFile || !activeFileId) {
+                      toast.error("Open a file to insert code into");
+                      return;
+                    }
+                    const sep = activeFile.content.endsWith("\n") || !activeFile.content ? "" : "\n";
+                    updateFileContent(
+                      activeFileId,
+                      activeFile.content + sep + code.replace(/\n$/, "") + "\n",
+                    );
+                    toast.success(
+                      `Inserted into ${activeFile.filename}.${activeFile.fileExtension}`,
+                    );
+                  }}
                 />
 
                 <DropdownMenu>

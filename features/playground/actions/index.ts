@@ -67,6 +67,35 @@ export const createPlayground = async (data: {
     }
 }
 
+export const createPlaygroundFromRepo = async (data: {
+    title: string;
+    description?: string;
+    templateData: TemplateFolder;
+}) => {
+    const user = await currentUser();
+    if (!user?.id) throw new Error("You must be signed in to import a repository");
+
+    try {
+        const playground = await db.playground.create({
+            data: {
+                title: data.title,
+                description: data.description,
+                template: "REACT",
+                userId: user.id,
+                templateFiles: {
+                    create: [{ content: JSON.stringify(data.templateData) }],
+                },
+            },
+        });
+
+        revalidatePath("/dashboard");
+        return playground;
+    } catch (error) {
+        console.error("createPlaygroundFromRepo error:", error);
+        throw new Error("Could not save the imported repository");
+    }
+};
+
 export const getAllPlaygroundForUser = async () => {
     const user = await currentUser();
     try {

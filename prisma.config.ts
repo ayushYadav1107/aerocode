@@ -9,7 +9,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Ensure TypeScript knows DATABASE_URL is defined at runtime
-    url: process.env["DATABASE_URL"],
+    url: process.env["DATABASE_URL"] ?? "",
   },
 });

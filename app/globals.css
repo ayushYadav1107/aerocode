@@ -124,3 +124,28 @@
     @apply font-sans;
   }
 }
+
+@keyframes aero-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -30px) scale(1.08); }
+}
+
+@keyframes aero-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.aero-orb {
+  animation: aero-float 14s ease-in-out infinite;
+}
+
+.aero-rise {
+  animation: aero-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aero-orb,
+  .aero-rise {
+    animation: none;
+  }
+}

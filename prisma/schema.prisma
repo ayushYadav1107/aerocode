@@ -25,6 +25,7 @@ model User {
   myPlayground Playground[]
 
   staredPlayground StarMark[]
+  chatMessages     ChatMessage[]
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 }
@@ -67,8 +68,23 @@ model Playground {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   Starmark      StarMark[]
+  chatMessages  ChatMessage[]
   userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id           String   @id @default(cuid()) @map("_id")
+  role         String
+  content      String
+  playgroundId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId, userId, createdAt])
 }
 
 model StarMark {

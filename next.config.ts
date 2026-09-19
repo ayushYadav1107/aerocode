@@ -32,6 +32,12 @@ const nextConfig: NextConfig = {
   },
   /* config options here */
   reactCompiler: true,
+  // app/api/template/[id]/route.ts reads this directory with a runtime-built
+  // fs path, not a static import, so Vercel's file tracer can't see it and
+  // would otherwise ship the function without the starter templates.
+  outputFileTracingIncludes: {
+    "/api/template/[id]": ["./Aerocode-starters/**/*"],
+  },
 };
 
 export default nextConfig;

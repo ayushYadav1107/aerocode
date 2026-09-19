@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { groqChat } from "@/lib/groq";
 
 interface CodeSuggestionRequest {
     fileContent: string;
@@ -125,27 +126,10 @@ Generate suggestion:`
 
 async function generateSuggestion(prompt: string): Promise<string> {
   try {
-    // Replace this with your actual AI service call
-    const response = await fetch("http://localhost:11434/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "codellama:latest",
-        prompt,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          max_tokens: 300,
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`AI service error: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    let suggestion = data.response
+    let suggestion = await groqChat(
+      [{ role: "user", content: prompt }],
+      { temperature: 0.7, maxTokens: 300 },
+    )
 
     // Clean up the suggestion
     if (suggestion.includes("```")) {
@@ -161,7 +145,7 @@ async function generateSuggestion(prompt: string): Promise<string> {
     console.error("AI generation error:", error)
     return "// AI suggestion unavailable"
   }
-} 
+}
 
 // Helper functions for code analysis
 function detectLanguage(content: string, fileName?: string): string {

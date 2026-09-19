@@ -5,19 +5,13 @@
  */
 
 export const publicRoutes: string[] = [
-   
+    "/", // landing page + the "How to use the editor" guide
 ]
 
 /**
- * An Array of routes that are protected
- * These routes require authentication
- * @type {string[]}
+ * Everything not listed in publicRoutes/authRoutes requires authentication,
+ * so /dashboard, /playground/* and the API routes stay protected by default.
  */
-
-export const protectedRoutes: string[] = [
-    "/",
-    
-]
 
 /**
  * An Array of routes that are accessible to the public

@@ -34,6 +34,11 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import TemplateSelectionModal from "@/features/dashboard/components/template-selection-modal";
+import { createPlayground } from "@/features/playground/actions";
 
 // Define the interface for a single playground item, icon is now a string
 interface PlaygroundData {
@@ -61,9 +66,32 @@ export function DashboardSidebar({
   initialPlaygroundData: PlaygroundData[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const starredPlaygrounds = initialPlaygroundData.filter((p) => p.starred);
   const recentPlaygrounds = initialPlaygroundData.slice(0, 5);
+
+  const handleCreate = async (data: {
+    title: string;
+    template: "REACT" | "NEXTJS" | "EXPRESS" | "VUE" | "HONO" | "ANGULAR";
+    description?: string;
+  }) => {
+    try {
+      const res = await createPlayground(data);
+      if (!res?.id) {
+        toast.error("Could not create the playground. Please try again.");
+        return;
+      }
+      toast.success("Playground created successfully");
+      setIsCreateOpen(false);
+      router.refresh();
+      router.push(`/playground/${res.id}`);
+    } catch (error) {
+      console.error("Error creating playground:", error);
+      toast.error("Could not create the playground. Please try again.");
+    }
+  };
 
   return (
     <Sidebar variant="inset" collapsible="icon" className="border-1 border-r">
@@ -147,7 +175,10 @@ export function DashboardSidebar({
             <History className="h-4 w-4 mr-2" />
             Recent
           </SidebarGroupLabel>
-          <SidebarGroupAction title="Create new playground">
+          <SidebarGroupAction
+            title="Create new playground"
+            onClick={() => setIsCreateOpen(true)}
+          >
             <FolderPlus className="h-4 w-4" />
           </SidebarGroupAction>
           <SidebarGroupContent>
@@ -208,6 +239,12 @@ export function DashboardSidebar({
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
+
+      <TemplateSelectionModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSubmit={handleCreate}
+      />
     </Sidebar>
   );
 }

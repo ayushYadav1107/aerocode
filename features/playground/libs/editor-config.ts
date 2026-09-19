@@ -52,7 +52,13 @@ export const getEditorLanguage = (fileExtension: string): string => {
   return languageMap[extension] || "plaintext";
 };
 
-export const configureMonaco = (monaco: Monaco) => {
+export type EditorTheme = "dark" | "light";
+
+export const setEditorTheme = (monaco: Monaco, theme: EditorTheme) => {
+  monaco.editor.setTheme(theme === "light" ? "modern-light" : "modern-dark");
+};
+
+export const configureMonaco = (monaco: Monaco, theme: EditorTheme = "dark") => {
   // Define a beautiful modern dark theme
   monaco.editor.defineTheme("modern-dark", {
     base: "vs-dark",
@@ -219,8 +225,35 @@ export const configureMonaco = (monaco: Monaco) => {
     },
   });
 
-  // Set the theme
-  monaco.editor.setTheme("modern-dark");
+  // Light counterpart: inherit VS Code's "vs" rather than restating every token
+  monaco.editor.defineTheme("modern-light", {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "6A737D", fontStyle: "italic" },
+      { token: "keyword", foreground: "A626A4", fontStyle: "bold" },
+      { token: "string", foreground: "B35200" },
+      { token: "number", foreground: "0B7285" },
+      { token: "entity.name.function", foreground: "6F42C1" },
+      { token: "variable", foreground: "005CC5" },
+    ],
+    colors: {
+      "editor.background": "#FFFFFF",
+      "editor.foreground": "#24292F",
+      "editorLineNumber.foreground": "#9AA0A6",
+      "editorLineNumber.activeForeground": "#24292F",
+      "editor.lineHighlightBackground": "#F6F8FA",
+      "editor.selectionBackground": "#BBDFFF",
+      "editorCursor.foreground": "#24292F",
+      "editorIndentGuide.background1": "#EBEDF0",
+      "editorSuggestWidget.background": "#FFFFFF",
+      "editorSuggestWidget.border": "#D0D7DE",
+      "editorHoverWidget.background": "#FFFFFF",
+      "editorHoverWidget.border": "#D0D7DE",
+    },
+  });
+
+  setEditorTheme(monaco, theme);
   
   // Dependencies live in the WebContainer, not in the Monaco worker, so anything that
   // depends on resolving "react", "./style.css", etc. can never succeed here. Silence

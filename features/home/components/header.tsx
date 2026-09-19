@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { BookOpen, LayoutGrid } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import UserButton from "../../auth/components/user-button";
 
@@ -46,28 +47,20 @@ export function Header() {
                   </Link>
                   <span className="text-zinc-300 dark:text-zinc-700">|</span>
                   {/* Desktop Navigation Links */}
-                  <div className="hidden sm:flex items-center gap-4">
+                  <div className="hidden sm:flex items-center gap-2">
                     <Link
-                      href="/docs/components/background-paths"
-                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+                      href="/dashboard"
+                      className="flex items-center gap-1.5 rounded-full border border-transparent bg-zinc-100 px-3.5 py-1.5 text-sm font-semibold text-zinc-800 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#E93F3F]/40 hover:text-[#E93F3F] dark:bg-zinc-800 dark:text-zinc-100 dark:hover:text-[#ff6b6b]"
                     >
-                      Docs
+                      <LayoutGrid className="h-4 w-4" />
+                      Playgrounds
                     </Link>
-                    {/* <Link
-                                            href="/pricing"
-                                            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-                                        >
-                                            Pricing
-                                        </Link> */}
                     <Link
-                      href="https://codesnippetui.pro/templates?utm_source=codesnippetui.com&utm_medium=header"
-                      target="_blank"
-                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors flex items-center gap-2"
+                      href="/#guide"
+                      className="flex items-center gap-1.5 rounded-full border border-[#E93F3F]/40 bg-[#E93F3F]/10 px-3.5 py-1.5 text-sm font-semibold text-[#E93F3F] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E93F3F] hover:text-white dark:text-[#ff6b6b] dark:hover:text-white"
                     >
-                      API
-                      <span className="text-green-500 dark:text-green-400 border border-green-500 dark:border-green-400 rounded-lg px-1 py-0.5 text-xs">
-                        New
-                      </span>
+                      <BookOpen className="h-4 w-4" />
+                      Guide
                     </Link>
                   </div>
                 </div>
@@ -81,18 +74,20 @@ export function Header() {
                 </div>
 
                 {/* Mobile Navigation remains unchanged */}
-                <div className="flex sm:hidden items-center gap-4">
+                <div className="flex sm:hidden items-center gap-2">
                   <Link
-                    href="/docs/components/action-search-bar"
-                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+                    href="/dashboard"
+                    aria-label="Playgrounds"
+                    className="flex items-center justify-center rounded-full bg-zinc-100 p-2 text-zinc-800 transition-colors dark:bg-zinc-800 dark:text-zinc-100"
                   >
-                    Docs
+                    <LayoutGrid className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/pricing"
-                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+                    href="/#guide"
+                    aria-label="Guide"
+                    className="flex items-center justify-center rounded-full border border-[#E93F3F]/40 bg-[#E93F3F]/10 p-2 text-[#E93F3F] transition-colors dark:text-[#ff6b6b]"
                   >
-                    API
+                    <BookOpen className="h-4 w-4" />
                   </Link>
                   <ThemeToggle />
                   <UserButton />

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { GuideSection } from "@/features/home/components/guide-section";
 export default function Home() {
    
   return (
@@ -23,12 +24,21 @@ export default function Home() {
         It is designed to help you write, debug, and optimize your code
         efficiently.
       </p>
-      <Link href={"/dashboard"}>
-        <Button variant={"brand"} className="mb-4" size={"lg"}>
-          Get Started
-          <ArrowUpRight className="w-3.5 h-3.5" />
-        </Button>
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link href={"/dashboard"}>
+          <Button variant={"brand"} className="mb-4" size={"lg"}>
+            Get Started
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Button>
+        </Link>
+        <Link href={"#guide"}>
+          <Button variant={"outline"} className="mb-4" size={"lg"}>
+            How it works
+          </Button>
+        </Link>
+      </div>
+
+      <GuideSection />
     </div>
   );
 }
