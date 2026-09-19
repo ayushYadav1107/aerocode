@@ -93,13 +93,55 @@ Indexed on `[playgroundId, userId, createdAt]` — the exact shape of the histor
 
 ## Relationships
 
-```
-User ──< Playground ──── TemplateFile   (1:1)
- │           │
- │           └──< ChatMessage >── User
- │
- ├──< Account
- └──< StarMark >── Playground
+```mermaid
+erDiagram
+    User ||--o{ Account : "OAuth links"
+    User ||--o{ Playground : owns
+    User ||--o{ StarMark : bookmarks
+    User ||--o{ ChatMessage : writes
+    Playground ||--|| TemplateFile : "file tree"
+    Playground ||--o{ StarMark : "starred by"
+    Playground ||--o{ ChatMessage : "conversation"
+
+    User {
+        string id PK
+        string email UK
+        string name
+        string image
+        enum   role "USER | ADMIN | PREMIUM_USER"
+    }
+    Account {
+        string id PK
+        string userId FK
+        string provider UK "google | github"
+        string providerAccountId UK
+    }
+    Playground {
+        string id PK
+        string title
+        string description
+        enum   template "REACT | NEXTJS | VUE | ANGULAR | EXPRESS | HONO"
+        string userId FK
+    }
+    TemplateFile {
+        string id PK
+        json   content "whole TemplateFolder tree"
+        string playgroundId FK "unique - one per playground"
+    }
+    StarMark {
+        string id PK
+        string userId FK
+        string playgroundId FK
+        bool   isMarked
+    }
+    ChatMessage {
+        string id PK
+        string role "user | assistant"
+        string content
+        string playgroundId FK
+        string userId FK
+        date   createdAt "indexed"
+    }
 ```
 
 Every relation cascades from `User` and `Playground`, so deleting either cleans up completely.

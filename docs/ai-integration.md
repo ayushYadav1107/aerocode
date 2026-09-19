@@ -69,8 +69,29 @@ The route prepends a system prompt with strict formatting rules, sends the last 
 
 It repairs two cases:
 
-1. A fence with no language → adds the active file's language.
-2. No fence at all → wraps the response, but **only** when at least 60% of non-blank lines look like code, so ordinary prose answers are never swallowed into a code block.
+```mermaid
+flowchart TD
+    In(["Model response"]) --> HasFence{"already fenced?"}
+
+    HasFence -- yes --> Labelled{"opening fence<br/>has a language?"}
+    Labelled -- yes --> Keep["✅ leave untouched"]
+    Labelled -- no --> AddLang["🏷️ add the active<br/>file's language"]
+
+    HasFence -- no --> Ratio{"≥60% of non-blank<br/>lines look like code?"}
+    Ratio -- yes --> Wrap["📦 wrap whole reply<br/>in a fenced block"]
+    Ratio -- no --> Prose["✅ leave as prose"]
+
+    Keep & AddLang & Wrap & Prose --> Out(["Rendered with<br/>Insert · Copy · Run"])
+
+    classDef ok fill:#052e16,stroke:#22c55e,color:#dcfce7
+    classDef fix fill:#422006,stroke:#f59e0b,color:#fef3c7
+    classDef q fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff
+    class Keep,Prose ok
+    class AddLang,Wrap fix
+    class HasFence,Labelled,Ratio q
+```
+
+The 60% threshold is what stops ordinary prose being swallowed into a code block:
 
 ```
 "function f() {"          → wrapped
