@@ -115,8 +115,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     secret: process.env.AUTH_SECRET,
     adapter: PrismaAdapter(db),
     session: { strategy: "jwt" },
-    // required off localhost: NextAuth otherwise rejects requests whose Host
-    // header doesn't match what it expects (Vercel, Render, etc. all need this)
-    trustHost: true,
+    // trustHost comes from authConfig below - required off localhost, or
+    // NextAuth rejects requests whose Host header it doesn't expect
     ...authConfig,
 })

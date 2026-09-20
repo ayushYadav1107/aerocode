@@ -34,6 +34,13 @@ export default auth((req) => {
 })
 
 export const config = {
-
-    matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+    // /api/auth/* is excluded here (not just via the isApiAuthRoute check
+    // above): running the auth() wrapper on Auth.js's own routes means two
+    // separate NextAuth engines process the same request, which throws
+    // "UnknownAction: Only GET and POST requests are supported" in production.
+    matcher: [
+        "/((?!api|_next|.+\\.[\\w]+$).*)",
+        "/api/((?!auth).*)",
+        "/trpc/(.*)",
+    ],
 };
