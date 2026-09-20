@@ -12,6 +12,13 @@ Spin up a React, Next.js, Vue, Angular, Express or Hono project — or import a 
 
 <br/>
 
+### 🚀 [**Try the live app → aerocode-ebon.vercel.app**](https://aerocode-ebon.vercel.app/)
+
+Sign in with Google or GitHub. No install needed.
+
+<br/>
+
+![Live](https://img.shields.io/badge/Live-aerocode--ebon.vercel.app-E93F3F?style=for-the-badge&logo=vercel&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=next.js&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -196,6 +203,24 @@ You will need a MongoDB connection string, Google and GitHub OAuth credentials, 
 
 ---
 
+## 🌐 Deployment
+
+AeroCode is deployed on Vercel's free tier at **<https://aerocode-ebon.vercel.app>**, backed by MongoDB Atlas and the Groq API.
+
+OAuth callbacks registered with each provider:
+
+| Provider | Callback URL |
+|---|---|
+| GitHub | `https://aerocode-ebon.vercel.app/api/auth/callback/github` |
+| Google | `https://aerocode-ebon.vercel.app/api/auth/callback/google` |
+
+> [!IMPORTANT]
+> Sign in from `aerocode-ebon.vercel.app`, not from a deployment-specific URL like `aerocode-<hash>-<team>.vercel.app`. Vercel gives every build its own unique URL, and OAuth callbacks are matched exactly, so signing in from one of those fails with `redirect_uri_mismatch`.
+
+Step-by-step instructions, environment variables and the build gotchas are in **[docs/deployment.md](docs/deployment.md)**.
+
+---
+
 ## 🧱 Stack
 
 | Layer | Choice |
@@ -217,7 +242,7 @@ You will need a MongoDB connection string, Google and GitHub OAuth credentials, 
 |---|---|
 | **[Architecture](docs/architecture.md)** | System diagrams, auth flow, the playground lifecycle, why WebContainers need special headers |
 | **[Setup](docs/setup.md)** | Local install, every environment variable, OAuth configuration, troubleshooting |
-| **[Deployment](docs/deployment.md)** | Deploying free on Vercel — and the four gotchas that break the build |
+| **[Deployment](docs/deployment.md)** | Deploying free on Vercel, the live URL, and the gotchas that break the build or sign-in |
 | **[AI integration](docs/ai-integration.md)** | The Groq client, both AI routes, and the code-fence normalizer |
 | **[Database](docs/database.md)** | Prisma schema, ER diagram, and how file trees are stored |
 | **[API reference](docs/api-reference.md)** | Every route, its payload, and its failure modes |

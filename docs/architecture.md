@@ -112,7 +112,7 @@ flowchart TD
 The model is **deny by default**. Adding a page protects it automatically; making something public means adding it to `publicRoutes` in [`routes.ts`](../routes.ts).
 
 > [!IMPORTANT]
-> `trustHost: true` is set in [`auth.ts`](../auth.ts). Without it Auth.js rejects requests whose `Host` header it cannot verify, which breaks every deployment that is not localhost.
+> `trustHost: true` is set in [`auth.config.ts`](../auth.config.ts), which both the main NextAuth instance in `auth.ts` and the separate instance built by `middleware.ts` consume. Without it Auth.js rejects requests whose `Host` header it cannot verify, which breaks every deployment that is not localhost — and on the middleware instance it fails *open*. See [Deployment → The gotchas](deployment.md#the-gotchas).
 
 ---
 

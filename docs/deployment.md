@@ -56,7 +56,7 @@ Vercel's serverless functions do not have static IPs. In Atlas → **Network Acc
 
 ### 5. Deploy, then fix the OAuth callbacks
 
-Deploy once to get your domain (`your-app.vercel.app`), then register the production callbacks — **sign-in fails until you do**:
+Deploy once to get your domain (`your-app.vercel.app`; this project's is `aerocode-ebon.vercel.app`), then register the production callbacks — **sign-in fails until you do**:
 
 **GitHub** → OAuth app settings → Authorization callback URL:
 ```
@@ -70,6 +70,11 @@ https://your-app.vercel.app/api/auth/callback/google
 
 Keep the `localhost:3000` entries so local development keeps working.
 
+> [!IMPORTANT]
+> Callbacks are matched **character for character**: use `https` (not `http`), no trailing slash, and remember to click **Update application** on GitHub — editing the field alone does not save it.
+>
+> Register the **stable** domain, and sign in from it. This project's live domain is `aerocode-ebon.vercel.app`. See [Sign-in fails with `redirect_uri_mismatch`](#sign-in-fails-with-redirect_uri_mismatch).
+
 ### 6. Redeploy
 
 Environment variables are baked in at build time, so redeploy after adding them.
@@ -78,7 +83,7 @@ Environment variables are baked in at build time, so redeploy after adding them.
 
 ## The gotchas
 
-Four things in this project will break a deployment if they are changed or removed. They are all handled already — this is so you know why the config looks the way it does.
+Six things in this project will break a deployment if they are changed or removed. They are all handled already — this is so you know why the config looks the way it does.
 
 ### Templates must be force-included in the bundle
 
@@ -96,9 +101,26 @@ The directory is ~11 MB with no `node_modules`, well under Vercel's 250 MB funct
 
 > The build prints an "Encountered unexpected file in NFT list" warning about this route. That warning is the tracer telling you it saw dynamic `fs` access — it is expected here, and the include above is the answer to it.
 
-### `trustHost` is required off localhost
+### `trustHost` must be set on **both** NextAuth instances
 
-Auth.js rejects requests whose `Host` header it cannot verify. [`auth.ts`](../auth.ts) sets `trustHost: true`; without it every sign-in on a deployed domain fails.
+Auth.js rejects requests whose `Host` header it cannot verify, so `trustHost: true` is required off localhost.
+
+There are two `NextAuth()` instances: the main one in [`auth.ts`](../auth.ts), and a second one that [`middleware.ts`](../middleware.ts) builds from [`auth.config.ts`](../auth.config.ts). `auth.ts` spreads `authConfig`, so putting `trustHost` in `auth.config.ts` covers both.
+
+> [!WARNING]
+> If the middleware's instance lacks it, it throws `UntrustedHost`, aborts before its redirect logic runs, and Next.js lets the request through. **Every protected page becomes public** — it fails open, silently. Verify with `next start` and a signed-out `curl` to `/dashboard`: it must return a `302` to `/auth/sign-in`.
+
+### The middleware must not run on `/api/auth/*`
+
+The matcher in [`middleware.ts`](../middleware.ts) excludes `/api/auth`. If it is included, Auth.js's own routes are processed by two engines per request and OAuth callbacks fail in production with `UnknownAction: Only GET and POST requests are supported`. Middleware already treated those routes as pass-through, so it never needed to see them.
+
+### Sign-in fails with `redirect_uri_mismatch`
+
+Every Vercel build has its own unique URL (`aerocode-<hash>-<team>.vercel.app`) in addition to the stable production domain. Because `trustHost` accepts any host, the app builds the OAuth redirect from whichever one you are on — and only the stable one is registered with Google and GitHub.
+
+Always sign in from the stable domain (`https://aerocode-ebon.vercel.app`), not from the link Vercel's dashboard gives you for a specific deployment. For a domain that can never change, add a custom domain under **Settings → Domains** and register that instead.
+
+You can see what the app sends by reading the `redirect_uri` parameter in the URL of the provider's error page.
 
 ### The whole repo is type-checked
 
